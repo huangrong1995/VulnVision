@@ -1,8 +1,8 @@
 'use client';
 
-import { Suspense, useEffect, useState } from 'react';
-import { Table, Input, Select, Button, Space, Tag, Spin, Row, Col } from 'antd';
-import { SearchOutlined, FilterOutlined } from '@ant-design/icons';
+import { Suspense, useEffect, useState, useCallback } from 'react';
+import { Table, Input, Select, Space, Tag, Spin, Row, Col } from 'antd';
+import { SearchOutlined } from '@ant-design/icons';
 import { useRouter, useSearchParams } from 'next/navigation';
 import type { TableProps } from 'antd';
 import { fetchCVEs } from '@/services/api';
@@ -18,51 +18,29 @@ function CVEsContent() {
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
-  const [severity, setSeverity] = useState<string | undefined>();
-  const [attackVector, setAttackVector] = useState<string | undefined>();
-  const [cwe, setCwe] = useState<string | undefined>();
-  const [epssCategory, setEpssCategory] = useState<string | undefined>();
-  const [inKev, setInKev] = useState<string | undefined>();
-  const [hasPoc, setHasPoc] = useState<string | undefined>();
-  const [search, setSearch] = useState('');
 
-  useEffect(() => {
-    const sev = searchParams.get('severity');
-    const av = searchParams.get('attack_vector');
-    const cweParam = searchParams.get('cwe');
-    const epss = searchParams.get('epss_category');
-    const kev = searchParams.get('inKev');
-    const poc = searchParams.get('hasPoc');
+  const loadCVEs = useCallback(async () => {
+    const sev = searchParams.get('severity') || undefined;
+    const av = searchParams.get('attack_vector') || undefined;
+    const cweParam = searchParams.get('cwe') || undefined;
+    const epss = searchParams.get('epss_category') || undefined;
+    const kev = searchParams.get('inKev') || undefined;
+    const poc = searchParams.get('hasPoc') || undefined;
+    const search = searchParams.get('search') || '';
 
-    if (sev) setSeverity(sev);
-    else setSeverity(undefined);
-
-    if (av) setAttackVector(av);
-    else setAttackVector(undefined);
-
-    if (cweParam) setCwe(cweParam);
-    else setCwe(undefined);
-
-    if (epss) setEpssCategory(epss);
-    else setEpssCategory(undefined);
-
-    if (kev) setInKev(kev);
-    else setInKev(undefined);
-
-    if (poc) setHasPoc(poc);
-    else setHasPoc(undefined);
-
-    setPage(1);
-  }, [searchParams]);
-
-  useEffect(() => {
-    loadCVEs();
-  }, [page, pageSize, severity, attackVector, cwe, epssCategory, inKev, hasPoc, search]);
-
-  const loadCVEs = async () => {
     setLoading(true);
     try {
-      const result = await fetchCVEs({ severity, attack_vector: attackVector, search, page, limit: pageSize, cwe, epss_category: epssCategory, in_kev: inKev, has_poc: hasPoc }) as CVEListResponse;
+      const result = await fetchCVEs({
+        severity: sev,
+        attack_vector: av,
+        search: search || undefined,
+        page,
+        limit: pageSize,
+        cwe: cweParam,
+        epss_category: epss,
+        in_kev: kev,
+        has_poc: poc
+      }) as CVEListResponse;
       const cvesWithIndex = result.cves.map((cve, idx) => ({
         ...cve,
         _uid: `${cve.id}-${page}-${idx}`
@@ -74,12 +52,40 @@ function CVEsContent() {
     } finally {
       setLoading(false);
     }
+  }, [searchParams, page, pageSize]);
+
+  useEffect(() => {
+    loadCVEs();
+  }, [loadCVEs]);
+
+  // Update URL with new filter value
+  const updateFilter = (key: string, value: string | null) => {
+    const params = new URLSearchParams(searchParams.toString());
+    if (value) {
+      params.set(key, value);
+    } else {
+      params.delete(key);
+    }
+    params.set('page', '1');
+    router.push(`/cves?${params.toString()}`);
   };
 
-  const handleSearch = (value: string) => {
-    setSearch(value);
-    setPage(1);
+  // Update search
+  const updateSearch = (value: string) => {
+    const params = new URLSearchParams(searchParams.toString());
+    if (value) {
+      params.set('search', value);
+    } else {
+      params.delete('search');
+    }
+    params.set('page', '1');
+    router.push(`/cves?${params.toString()}`);
   };
+
+  // Get current filter values from URL
+  const currentSeverity = searchParams.get('severity') || undefined;
+  const currentAttackVector = searchParams.get('attack_vector') || undefined;
+  const currentSearch = searchParams.get('search') || '';
 
   const getSeverityColor = (sev: string) => {
     const colors: Record<string, string> = {
@@ -183,9 +189,9 @@ function CVEsContent() {
             placeholder="Search CVEs..."
             prefix={<SearchOutlined />}
             allowClear
-            value={search}
-            onChange={(e) => handleSearch(e.target.value)}
-            onPressEnter={(e) => handleSearch((e.target as HTMLInputElement).value)}
+            value={currentSearch}
+            onChange={(e) => updateSearch(e.target.value)}
+            onPressEnter={(e) => updateSearch((e.target as HTMLInputElement).value)}
             style={{ width: '100%' }}
           />
         </Col>
@@ -193,8 +199,8 @@ function CVEsContent() {
           <Select
             placeholder="Severity"
             allowClear
-            value={severity}
-            onChange={(v) => { setSeverity(v); setPage(1); }}
+            value={currentSeverity}
+            onChange={(v) => updateFilter('severity', v)}
             style={{ width: '100%' }}
           >
             <Option value="critical">Critical</Option>
@@ -207,8 +213,8 @@ function CVEsContent() {
           <Select
             placeholder="Attack Vector"
             allowClear
-            value={attackVector}
-            onChange={(v) => { setAttackVector(v); setPage(1); }}
+            value={currentAttackVector}
+            onChange={(v) => updateFilter('attack_vector', v)}
             style={{ width: '100%' }}
           >
             <Option value="NETWORK">Network</Option>
