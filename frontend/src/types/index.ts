@@ -13,14 +13,16 @@ export interface DashboardData {
   };
   top_cwes: Array<{ cwe: string; count: number }>;
   epss_distribution: {
-    high_risk: number;
-    medium_risk: number;
-    low_risk: number;
+    critical: number;
+    high: number;
+    medium: number;
+    low: number;
   };
 }
 
 export interface CVE {
   id: string;
+  _uid?: string;
   title?: string;
   severity: string;
   risk: number;

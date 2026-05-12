@@ -1,19 +1,28 @@
 'use client';
 
 import ReactECharts from 'echarts-for-react';
+import { useRouter } from 'next/navigation';
 
 interface EPSSDistributionChartProps {
   data: {
-    high_risk: number;
-    medium_risk: number;
-    low_risk: number;
+    critical: number;
+    high: number;
+    medium: number;
+    low: number;
   };
 }
 
 export function EPSSDistributionChart({ data }: EPSSDistributionChartProps) {
+  const router = useRouter();
+
+  const handleClick = (params: any) => {
+    const category = params.name as string;
+    router.push(`/cves?epss_category=${category.toLowerCase()}`);
+  };
+
   const option = {
     title: {
-      text: 'EPSS Risk Distribution',
+      text: 'EPSS Risk Distribution (Click to filter)',
       left: 'center',
       top: 10,
       textStyle: { fontSize: 16, fontWeight: 600 }
@@ -31,22 +40,23 @@ export function EPSSDistributionChart({ data }: EPSSDistributionChartProps) {
     },
     xAxis: {
       type: 'category',
-      data: ['High Risk', 'Medium Risk', 'Low Risk'],
+      data: ['Critical', 'High', 'Medium', 'Low'],
       axisLabel: { fontSize: 11 }
     },
     yAxis: {
       type: 'value',
       axisLabel: { fontSize: 11 }
     },
-    color: ['#cf1322', '#fa8c16', '#52c41a'],
+    color: ['#cf1322', '#fa8c16', '#eac500', '#52c41a'],
     series: [
       {
         name: 'Count',
         type: 'bar',
         data: [
-          { value: data.high_risk, itemStyle: { color: '#cf1322' } },
-          { value: data.medium_risk, itemStyle: { color: '#fa8c16' } },
-          { value: data.low_risk, itemStyle: { color: '#52c41a' } }
+          { value: data.critical, itemStyle: { color: '#cf1322' } },
+          { value: data.high, itemStyle: { color: '#fa8c16' } },
+          { value: data.medium, itemStyle: { color: '#eac500' } },
+          { value: data.low, itemStyle: { color: '#52c41a' } }
         ],
         barWidth: '50%',
         itemStyle: {
@@ -56,5 +66,11 @@ export function EPSSDistributionChart({ data }: EPSSDistributionChartProps) {
     ]
   };
 
-  return <ReactECharts option={option} style={{ height: 300 }} />;
+  return (
+    <ReactECharts
+      option={option}
+      style={{ height: 300 }}
+      onEvents={{ click: handleClick }}
+    />
+  );
 }

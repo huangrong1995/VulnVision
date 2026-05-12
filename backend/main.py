@@ -52,10 +52,11 @@ def calculate_stats(cves):
     top_cwes = sorted(cwe_counts.items(), key=lambda x: x[1], reverse=True)[:5]
     top_cwes = [{"cwe": cwe, "count": count} for cwe, count in top_cwes]
 
-    # Calculate EPSS distribution
-    high_risk = sum(1 for cve in cves if cve.get("epssScore", 0) >= 0.05)
-    medium_risk = sum(1 for cve in cves if 0.01 <= cve.get("epssScore", 0) < 0.05)
-    low_risk = sum(1 for cve in cves if cve.get("epssScore", 0) < 0.01)
+    # Calculate EPSS distribution (EPSS + KEV联动)
+    epss_critical = sum(1 for cve in cves if cve.get("inKev") or cve.get("epssScore", 0) >= 0.5)
+    epss_high = sum(1 for cve in cves if not cve.get("inKev") and cve.get("epssScore", 0) >= 0.1 and cve.get("epssScore", 0) < 0.5)
+    epss_medium = sum(1 for cve in cves if not cve.get("inKev") and cve.get("epssScore", 0) >= 0.01 and cve.get("epssScore", 0) < 0.1)
+    epss_low = sum(1 for cve in cves if not cve.get("inKev") and cve.get("epssScore", 0) < 0.01)
 
     return {
         "total_cves": total,
@@ -67,9 +68,10 @@ def calculate_stats(cves):
         "severity_distribution": severities,
         "top_cwes": top_cwes,
         "epss_distribution": {
-            "high_risk": high_risk,
-            "medium_risk": medium_risk,
-            "low_risk": low_risk
+            "critical": epss_critical,
+            "high": epss_high,
+            "medium": epss_medium,
+            "low": epss_low
         }
     }
 
@@ -103,9 +105,10 @@ def get_dashboard():
             {"cwe": "CWE-401", "count": 12}
         ],
         "epss_distribution": {
-            "high_risk": 15,
-            "medium_risk": 67,
-            "low_risk": 500
+            "critical": 15,
+            "high": 67,
+            "medium": 200,
+            "low": 300
         }
     }
 
@@ -116,6 +119,10 @@ def list_cves(
     attack_vector: str = None,
     component: str = None,
     search: str = None,
+    cwe: str = None,
+    epss_category: str = None,
+    in_kev: str = None,
+    has_poc: str = None,
     page: int = 1,
     limit: int = 10
 ):
@@ -125,11 +132,26 @@ def list_cves(
 
     # Apply filters
     filtered = cves
-    if severity:
+    if severity and severity.lower() != 'undefined':
         filtered = [c for c in filtered if c.get("severity", "").lower() == severity.lower()]
-    if attack_vector:
-        filtered = [c for c in filtered if c.get("attackVector", "").upper() == attack_vector.upper()]
-    if search:
+    if attack_vector and attack_vector.lower() != 'undefined':
+        filtered = [c for c in filtered if (c.get("attackVector") or "").upper() == attack_vector.upper()]
+    if cwe and cwe.lower() != 'undefined':
+        filtered = [c for c in filtered if cwe.upper() in [x.upper() for x in c.get("cwes", [])]]
+    if epss_category and epss_category.lower() != 'undefined':
+        if epss_category.lower() == 'critical':
+            filtered = [c for c in filtered if c.get("inKev") or c.get("epssScore", 0) >= 0.5]
+        elif epss_category.lower() == 'high':
+            filtered = [c for c in filtered if not c.get("inKev") and 0.1 <= c.get("epssScore", 0) < 0.5]
+        elif epss_category.lower() == 'medium':
+            filtered = [c for c in filtered if not c.get("inKev") and 0.01 <= c.get("epssScore", 0) < 0.1]
+        elif epss_category.lower() == 'low':
+            filtered = [c for c in filtered if not c.get("inKev") and c.get("epssScore", 0) < 0.01]
+    if in_kev and in_kev.lower() == 'true':
+        filtered = [c for c in filtered if c.get("inKev") == True]
+    if has_poc and has_poc.lower() == 'true':
+        filtered = [c for c in filtered if c.get("exploitMaturity") in ['poc', 'PoC', 'POC']]
+    if search and search.lower() != 'undefined':
         search_lower = search.lower()
         filtered = [c for c in filtered if search_lower in c.get("id", "").lower() or search_lower in c.get("component", {}).get("name", "").lower()]
 
@@ -190,12 +212,32 @@ async def import_cves(file: UploadFile = File(...)):
     else:
         raise HTTPException(status_code=400, detail="Unexpected JSON format")
 
+    def extract_cve_id(cve):
+        """Extract proper CVE ID from various fields"""
+        import re
+        cve_id = cve.get("id", "")
+        # If id doesn't look like a CVE ID, try to extract from title or cveReferences
+        if not cve_id.startswith("CVE-"):
+            title = cve.get("title", "")
+            if title.startswith("CVE-"):
+                cve_id = title.split(" ")[0]
+            else:
+                cve_refs = cve.get("cveReferences", [])
+                for ref in cve_refs:
+                    if "CVE-" in ref:
+                        match = re.search(r'(CVE-\d{4}-\d+)', ref)
+                        if match:
+                            cve_id = match.group(1)
+                            break
+        return cve_id
+
     # Normalize CVE data to ensure consistent structure
     normalized_cves = []
     for cve in cves:
+        cve_id = extract_cve_id(cve)
         normalized = {
-            "id": cve.get("id", ""),
-            "title": cve.get("title", cve.get("id", "")),
+            "id": cve_id,
+            "title": cve.get("title", cve_id),
             "severity": cve.get("severity", "unknown"),
             "risk": cve.get("risk", cve.get("cvssScore", 0)),
             "description": cve.get("description", ""),

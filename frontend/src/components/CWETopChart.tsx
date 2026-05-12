@@ -1,12 +1,20 @@
 'use client';
 
 import ReactECharts from 'echarts-for-react';
+import { useRouter } from 'next/navigation';
 
 interface CWETopChartProps {
   data: Array<{ cwe: string; count: number }>;
 }
 
 export function CWETopChart({ data }: CWETopChartProps) {
+  const router = useRouter();
+
+  const handleClick = (params: any) => {
+    const cwe = params.name as string;
+    router.push(`/cves?cwe=${cwe}`);
+  };
+
   const chartData = data.slice(0, 10).map(item => ({
     cwe: item.cwe,
     count: item.count
@@ -14,7 +22,7 @@ export function CWETopChart({ data }: CWETopChartProps) {
 
   const option = {
     title: {
-      text: 'Top 10 CWEs',
+      text: 'Top 10 CWEs (Click to filter)',
       left: 'center',
       top: 10,
       textStyle: { fontSize: 16, fontWeight: 600 }
@@ -54,5 +62,11 @@ export function CWETopChart({ data }: CWETopChartProps) {
     ]
   };
 
-  return <ReactECharts option={option} style={{ height: 350 }} />;
+  return (
+    <ReactECharts
+      option={option}
+      style={{ height: 350 }}
+      onEvents={{ click: handleClick }}
+    />
+  );
 }

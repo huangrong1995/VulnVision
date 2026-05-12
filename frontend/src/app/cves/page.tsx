@@ -20,11 +20,19 @@ function CVEsContent() {
   const [pageSize, setPageSize] = useState(10);
   const [severity, setSeverity] = useState<string | undefined>();
   const [attackVector, setAttackVector] = useState<string | undefined>();
+  const [cwe, setCwe] = useState<string | undefined>();
+  const [epssCategory, setEpssCategory] = useState<string | undefined>();
+  const [inKev, setInKev] = useState<string | undefined>();
+  const [hasPoc, setHasPoc] = useState<string | undefined>();
   const [search, setSearch] = useState('');
 
   useEffect(() => {
     const sev = searchParams.get('severity');
     const av = searchParams.get('attack_vector');
+    const cweParam = searchParams.get('cwe');
+    const epss = searchParams.get('epss_category');
+    const kev = searchParams.get('inKev');
+    const poc = searchParams.get('hasPoc');
 
     if (sev) setSeverity(sev);
     else setSeverity(undefined);
@@ -32,18 +40,34 @@ function CVEsContent() {
     if (av) setAttackVector(av);
     else setAttackVector(undefined);
 
+    if (cweParam) setCwe(cweParam);
+    else setCwe(undefined);
+
+    if (epss) setEpssCategory(epss);
+    else setEpssCategory(undefined);
+
+    if (kev) setInKev(kev);
+    else setInKev(undefined);
+
+    if (poc) setHasPoc(poc);
+    else setHasPoc(undefined);
+
     setPage(1);
   }, [searchParams]);
 
   useEffect(() => {
     loadCVEs();
-  }, [page, pageSize, severity, attackVector, search]);
+  }, [page, pageSize, severity, attackVector, cwe, epssCategory, inKev, hasPoc, search]);
 
   const loadCVEs = async () => {
     setLoading(true);
     try {
-      const result = await fetchCVEs({ severity, attack_vector: attackVector, search, page, limit: pageSize }) as CVEListResponse;
-      setCves(result.cves);
+      const result = await fetchCVEs({ severity, attack_vector: attackVector, search, page, limit: pageSize, cwe, epss_category: epssCategory, in_kev: inKev, has_poc: hasPoc }) as CVEListResponse;
+      const cvesWithIndex = result.cves.map((cve, idx) => ({
+        ...cve,
+        _uid: `${cve.id}-${page}-${idx}`
+      }));
+      setCves(cvesWithIndex);
       setTotal(result.total);
     } catch (err) {
       console.error('Failed to load CVEs:', err);
@@ -204,7 +228,7 @@ function CVEsContent() {
         <Table
           columns={columns}
           dataSource={cves}
-          rowKey="id"
+          rowKey={(record) => record._uid || record.id}
           pagination={{
             current: page,
             pageSize: pageSize,

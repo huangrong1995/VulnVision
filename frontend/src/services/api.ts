@@ -15,6 +15,10 @@ export async function fetchCVEs(params?: {
   attack_vector?: string;
   component?: string;
   search?: string;
+  cwe?: string;
+  epss_category?: string;
+  in_kev?: string;
+  has_poc?: string;
   page?: number;
   limit?: number;
 }) {
@@ -23,6 +27,10 @@ export async function fetchCVEs(params?: {
   if (params?.attack_vector) searchParams.set('attack_vector', params.attack_vector);
   if (params?.component) searchParams.set('component', params.component);
   if (params?.search) searchParams.set('search', params.search);
+  if (params?.cwe) searchParams.set('cwe', params.cwe);
+  if (params?.epss_category) searchParams.set('epss_category', params.epss_category);
+  if (params?.in_kev) searchParams.set('in_kev', params.in_kev);
+  if (params?.has_poc) searchParams.set('has_poc', params.has_poc);
   if (params?.page) searchParams.set('page', String(params.page));
   if (params?.limit) searchParams.set('limit', String(params.limit));
 
