@@ -52,12 +52,27 @@ export default function HomePage() {
 
     try {
       const formData = new FormData();
-      formData.append('file', file as unknown as Blob, file.name);
+      // Get actual file - Ant Design may wrap it in originFileObj
+      const fileObj: any = file;
+      const actualFile = fileObj.originFileObj || fileObj;
 
-      const res = await fetch('http://localhost:8001/api/import/cves', {
+      // Ensure we have a proper File object
+      if (!actualFile || !(actualFile instanceof File)) {
+        message.error('Invalid file object');
+        setUploading(false);
+        return;
+      }
+
+      console.log('Uploading:', actualFile.name, 'size:', actualFile.size);
+
+      formData.append('file', actualFile);
+
+      const res = await fetch('/api/import/cves', {
         method: 'POST',
         body: formData,
       });
+
+      console.log('Response status:', res.status);
 
       const result = await res.json();
       setImportResult(result);

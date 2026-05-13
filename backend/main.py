@@ -33,6 +33,8 @@ def calculate_stats(cves):
     severities = {"critical": 0, "high": 0, "medium": 0, "low": 0}
     in_kev = 0
     has_poc = 0
+    is_weaponized = 0
+    is_ransomware = 0
     network_attack = 0
     cwe_counts = {}
 
@@ -42,8 +44,12 @@ def calculate_stats(cves):
             severities[sev] += 1
         if cve.get("inKev"):
             in_kev += 1
-        if cve.get("exploitMaturity"):
+        if cve.get("exploitMaturity") and cve.get("exploitMaturity").lower() == "poc":
             has_poc += 1
+        if cve.get("isWeaponized"):
+            is_weaponized += 1
+        if cve.get("isRansomware"):
+            is_ransomware += 1
         if cve.get("attackVector") == "NETWORK":
             network_attack += 1
         for cwe in cve.get("cwes", []):
@@ -64,6 +70,8 @@ def calculate_stats(cves):
         "critical_severity": severities["critical"],
         "in_kev": in_kev,
         "has_poc": has_poc,
+        "is_weaponized": is_weaponized,
+        "is_ransomware": is_ransomware,
         "network_attack": network_attack,
         "severity_distribution": severities,
         "top_cwes": top_cwes,
@@ -123,6 +131,8 @@ def list_cves(
     epss_category: str = None,
     in_kev: str = None,
     has_poc: str = None,
+    weaponized: str = None,
+    ransomware: str = None,
     page: int = 1,
     limit: int = 10
 ):
@@ -151,6 +161,10 @@ def list_cves(
         filtered = [c for c in filtered if c.get("inKev") == True]
     if has_poc and has_poc.lower() == 'true':
         filtered = [c for c in filtered if c.get("exploitMaturity") in ['poc', 'PoC', 'POC']]
+    if weaponized and weaponized.lower() == 'true':
+        filtered = [c for c in filtered if c.get("isWeaponized") == True]
+    if ransomware and ransomware.lower() == 'true':
+        filtered = [c for c in filtered if c.get("isRansomware") == True]
     if search and search.lower() != 'undefined':
         search_lower = search.lower()
         filtered = [c for c in filtered if search_lower in c.get("id", "").lower() or search_lower in c.get("component", {}).get("name", "").lower()]
@@ -247,7 +261,10 @@ async def import_cves(file: UploadFile = File(...)):
             "epssScore": cve.get("epssScore", 0),
             "epssPercentile": cve.get("epssPercentile", 0),
             "exploitMaturity": cve.get("exploitMaturity", ""),
-            "inKev": cve.get("inKev", False),
+            "exploitInfo": cve.get("exploitInfo", []),
+            "inKev": cve.get("inKev", False) or ("kev" in [x.lower() for x in cve.get("exploitInfo", []) if x]),
+            "isWeaponized": "weaponized" in [x.lower() for x in cve.get("exploitInfo", []) if x] or (cve.get("exploitMaturity") or "").lower() == "weaponized",
+            "isRansomware": "ransomware" in [x.lower() for x in cve.get("exploitInfo", []) if x],
             "attackVector": cve.get("attackVector", "NETWORK"),
             "remediation": cve.get("remediation", ""),
             "detected": cve.get("detected", cve.get("published", "")),

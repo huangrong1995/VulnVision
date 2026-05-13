@@ -19,6 +19,8 @@ export async function fetchCVEs(params?: {
   epss_category?: string;
   in_kev?: string;
   has_poc?: string;
+  weaponized?: string;
+  ransomware?: string;
   page?: number;
   limit?: number;
 }) {
@@ -31,6 +33,8 @@ export async function fetchCVEs(params?: {
   if (params?.epss_category) searchParams.set('epss_category', params.epss_category);
   if (params?.in_kev) searchParams.set('in_kev', params.in_kev);
   if (params?.has_poc) searchParams.set('has_poc', params.has_poc);
+  if (params?.weaponized) searchParams.set('weaponized', params.weaponized);
+  if (params?.ransomware) searchParams.set('ransomware', params.ransomware);
   if (params?.page) searchParams.set('page', String(params.page));
   if (params?.limit) searchParams.set('limit', String(params.limit));
 

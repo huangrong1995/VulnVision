@@ -4,6 +4,8 @@ export interface DashboardData {
   critical_severity: number;
   in_kev: number;
   has_poc: number;
+  is_weaponized: number;
+  is_ransomware: number;
   network_attack: number;
   severity_distribution: {
     critical: number;

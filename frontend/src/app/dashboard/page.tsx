@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { Row, Col, Spin } from 'antd';
-import { SafetyOutlined, AlertOutlined, BugOutlined, ThunderboltOutlined, GlobalOutlined } from '@ant-design/icons';
+import { SafetyOutlined, AlertOutlined, BugOutlined, ThunderboltOutlined, GlobalOutlined, ExclamationCircleOutlined, CrownOutlined } from '@ant-design/icons';
 import { StatCard } from '@/components/StatCard';
 import { SeverityPieChart } from '@/components/SeverityPieChart';
 import { EPSSDistributionChart } from '@/components/EPSSDistributionChart';
@@ -99,6 +99,24 @@ export default function DashboardPage() {
             icon={<AlertOutlined />}
             color="#52c41a"
             onClick={() => router.push('/cves?hasPoc=true')}
+          />
+        </Col>
+        <Col xs={24} sm={12} lg={6}>
+          <StatCard
+            title="Weaponized"
+            value={data.is_weaponized}
+            icon={<ExclamationCircleOutlined />}
+            color="#fa8c16"
+            onClick={() => router.push('/cves?weaponized=true')}
+          />
+        </Col>
+        <Col xs={24} sm={12} lg={6}>
+          <StatCard
+            title="Ransomware"
+            value={data.is_ransomware}
+            icon={<CrownOutlined />}
+            color="#cf1322"
+            onClick={() => router.push('/cves?ransomware=true')}
           />
         </Col>
         <Col xs={24} sm={12} lg={6}>
