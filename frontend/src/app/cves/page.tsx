@@ -26,6 +26,8 @@ function CVEsContent() {
     const epss = searchParams.get('epss_category') || undefined;
     const kev = searchParams.get('inKev') || undefined;
     const poc = searchParams.get('hasPoc') || undefined;
+    const weaponized = searchParams.get('weaponized') || undefined;
+    const ransomware = searchParams.get('ransomware') || undefined;
     const search = searchParams.get('search') || '';
 
     setLoading(true);
@@ -39,7 +41,9 @@ function CVEsContent() {
         cwe: cweParam,
         epss_category: epss,
         in_kev: kev,
-        has_poc: poc
+        has_poc: poc,
+        weaponized: weaponized,
+        ransomware: ransomware
       }) as CVEListResponse;
       const cvesWithIndex = result.cves.map((cve, idx) => ({
         ...cve,
